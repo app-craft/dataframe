@@ -1,4 +1,3 @@
-
 defmodule DataFrame do
   @moduledoc """
     Functions to create and modify a Frame, a structure with a 2D table with information, indexes and columns
@@ -26,7 +25,7 @@ defmodule DataFrame do
   @doc """
     Creates a new Frame from a 2D table, an index and a column array
   """
-  @spec new(Table.t | list, list, list) :: Frame.t
+  @spec new(Table.t() | list, list, list) :: Frame.t()
   def new(table, columns, index) when is_list(index) and is_list(columns) do
     values = Table.new(table)
     Table.check_dimensional_compatibility!(values, index, 0)
@@ -35,22 +34,23 @@ defmodule DataFrame do
   end
 
   defp autoindex_for_values_dimension(values, dimension) do
-    table_dimension = values |> Table.new |> Table.dimensions |> Enum.at(dimension)
+    table_dimension = values |> Table.new() |> Table.dimensions() |> Enum.at(dimension)
+
     if table_dimension == 0 do
       []
     else
-      Enum.to_list 0..table_dimension - 1
+      Enum.to_list(0..(table_dimension - 1))
     end
   end
 
   @doc """
     Creates a Frame from the textual output of a frame (allows copying data from webpages, etc.)
   """
-  @spec parse(String.t) :: Frame.t
+  @spec parse(String.t()) :: Frame.t()
   def parse(text) do
     [header | data] = String.split(text, "\n", trim: true)
     columns = String.split(header, " ", trim: true)
-    data_values = data |> Table.new |> Table.map_rows(&(String.split(&1, " ", trim: true)))
+    data_values = data |> Table.new() |> Table.map_rows(&String.split(&1, " ", trim: true))
     [values, index] = Table.remove_column(data_values, 0, return_column: true)
     values_data = Table.map(values, &transform_type/1)
     columns_data = Enum.map(columns, &transform_type/1)
@@ -61,9 +61,11 @@ defmodule DataFrame do
   # TODO: Refactor, probably this is the most non-Elixir code even written
   defp transform_type(element) do
     int = Integer.parse(element)
-    if int == :error or (elem(int, 1) != "") do
+
+    if int == :error or elem(int, 1) != "" do
       float = Float.parse(element)
-      if float == :error or (elem(float, 1) != "") do
+
+      if float == :error or elem(float, 1) != "" do
         element
       else
         elem(float, 0)
@@ -80,7 +82,7 @@ defmodule DataFrame do
   @doc """
     Returns a Frame which data has been transposed.
   """
-  @spec transpose(Frame.t) :: Frame.t
+  @spec transpose(Frame.t()) :: Frame.t()
   def transpose(frame) do
     %Frame{values: Table.transpose(frame.values), index: frame.columns, columns: frame.index}
   end
@@ -102,8 +104,8 @@ defmodule DataFrame do
   def group_by(frame, master_column) do
     frame
     |> column(master_column)
-    |> Enum.uniq
-    |> Enum.map(fn(value) -> filter_rows(frame, master_column, value) end)
+    |> Enum.uniq()
+    |> Enum.map(fn value -> filter_rows(frame, master_column, value) end)
   end
 
   @doc """
@@ -117,7 +119,7 @@ defmodule DataFrame do
   @doc """
     Sorts the data in the frame based on its index. By default the data is sorted in ascending order.
   """
-  @spec sort_index(Frame.t, boolean) :: Frame.t
+  @spec sort_index(Frame.t(), boolean) :: Frame.t()
   def sort_index(frame, ascending \\ true) do
     sort(frame, 0, ascending)
   end
@@ -125,24 +127,27 @@ defmodule DataFrame do
   @doc """
     Sorts the data in the frame based on a given column. By default the data is sorted in ascending order.
   """
-  @spec sort_values(Frame.t, String.t, boolean) :: Frame.t
+  @spec sort_values(Frame.t(), String.t(), boolean) :: Frame.t()
   def sort_values(frame, column_name, ascending \\ true) do
-    index = Enum.find_index(frame.columns, fn(x) -> x == column_name end)
+    index = Enum.find_index(frame.columns, fn x -> x == column_name end)
     sort(frame, index + 1, ascending)
   end
 
   defp sort(frame, column_index, ascending) do
-    sorting_func = if ascending do
-      fn(x,y) -> Enum.at(x, column_index) > Enum.at(y, column_index) end
-    else
-      fn(x,y) -> Enum.at(x, column_index) < Enum.at(y, column_index) end
-    end
-    [values, index] = frame.values
+    sorting_func =
+      if ascending do
+        fn x, y -> Enum.at(x, column_index) > Enum.at(y, column_index) end
+      else
+        fn x, y -> Enum.at(x, column_index) < Enum.at(y, column_index) end
+      end
+
+    [values, index] =
+      frame.values
       |> Table.append_column(frame.index)
-      |> Table.sort_rows(fn(x,y) -> sorting_func.(x,y) end)
+      |> Table.sort_rows(fn x, y -> sorting_func.(x, y) end)
       |> Table.remove_column(0, return_column: true)
 
-      DataFrame.new(values, frame.columns, index)
+    DataFrame.new(values, frame.columns, index)
   end
 
   # ##################################################
@@ -152,7 +157,7 @@ defmodule DataFrame do
   @doc """
   Returns the information at the top of the frame. Defaults to 5 lines.
   """
-  @spec head(Frame.t, integer) :: Frame.t
+  @spec head(Frame.t(), integer) :: Frame.t()
   def head(frame, size \\ 5) do
     DataFrame.new(Enum.take(frame.values, size), frame.columns, Enum.take(frame.index, size))
   end
@@ -160,7 +165,7 @@ defmodule DataFrame do
   @doc """
   Returns the information at the bottom of the frame. Defaults to 5 lines.
   """
-  @spec tail(Frame.t, integer) :: Frame.t
+  @spec tail(Frame.t(), integer) :: Frame.t()
   def tail(frame, the_size \\ 5) do
     size = -the_size
     head(frame, size)
@@ -172,6 +177,7 @@ defmodule DataFrame do
   def rows(frame, first..last) when is_integer(first) and is_integer(last) do
     irows(frame, indexes_by_named_range(frame.index, first..last))
   end
+
   def rows(frame, row_names) when is_list(row_names) do
     irows(frame, indexes_by_name(frame.index, row_names))
   end
@@ -182,6 +188,7 @@ defmodule DataFrame do
   def irows(frame, first..last) when is_integer(first) and is_integer(last) do
     irows(frame, Enum.to_list(first..last))
   end
+
   def irows(frame, row_indexes) when is_list(row_indexes) do
     rows = multiple_at(frame.index, row_indexes)
     values = Table.rows(frame.values, row_indexes)
@@ -194,6 +201,7 @@ defmodule DataFrame do
   def columns(frame, first..last) when is_integer(first) and is_integer(last) do
     icolumns(frame, indexes_by_named_range(frame.columns, first..last))
   end
+
   def columns(frame, column_names) when is_list(column_names) do
     icolumns(frame, indexes_by_name(frame.columns, column_names))
   end
@@ -204,6 +212,7 @@ defmodule DataFrame do
   def icolumns(frame, first..last) when is_integer(first) and is_integer(last) do
     icolumns(frame, Enum.to_list(first..last))
   end
+
   def icolumns(frame, column_indexes) when is_list(column_indexes) do
     columns = multiple_at(frame.columns, column_indexes)
     values = Table.columns(frame.values, column_indexes)
@@ -215,7 +224,7 @@ defmodule DataFrame do
     Parameters are any list of rows and columns with names or a ranges of names
     To get only rows or columns check the functions above
   """
-  @spec loc(Frame.t, Range.t | list(), Range.t | list()) :: Frame.t
+  @spec loc(Frame.t(), Range.t() | list(), Range.t() | list()) :: Frame.t()
   def loc(frame, row_names, column_names) do
     frame |> rows(row_names) |> columns(column_names)
   end
@@ -224,7 +233,7 @@ defmodule DataFrame do
     Returns a slice of the data in the frame.
     Parameters are any list of rows and columns
   """
-  @spec iloc(Frame.t, Range.t | list(integer), Range.t | list(integer)) :: Frame.t
+  @spec iloc(Frame.t(), Range.t() | list(integer), Range.t() | list(integer)) :: Frame.t()
   def iloc(frame, row_index, column_index) do
     frame |> irows(row_index) |> icolumns(column_index)
   end
@@ -233,41 +242,45 @@ defmodule DataFrame do
   # same than .at but accepting a list of indexes
   defp multiple_at(list, list_index) do
     list_index
-    |> Enum.map(fn(index) -> Enum.at(list, index) end)
-    |> Enum.filter(fn(element) -> element != nil end)
+    |> Enum.map(fn index -> Enum.at(list, index) end)
+    |> Enum.filter(fn element -> element != nil end)
   end
 
   defp indexes_by_named_range(list, first..last) do
-    first_index = Enum.find_index(list, fn(x) -> to_string(x) == to_string(Enum.at(first, 0)) end)
-    last_index  = Enum.find_index(list, fn(x) -> to_string(x) == to_string(Enum.at(last, 0)) end)
+    first_index = Enum.find_index(list, fn x -> to_string(x) == to_string(Enum.at(first, 0)) end)
+    last_index = Enum.find_index(list, fn x -> to_string(x) == to_string(Enum.at(last, 0)) end)
     Enum.to_list(first_index..last_index)
   end
 
   defp indexes_by_name(name_list, selected_names) when is_list(selected_names) do
-    indexes = name_list |> Enum.with_index |> Enum.reduce([], fn(tuple, acc) ->
-      if Enum.member?(selected_names, elem(tuple,0)) do
-        [elem(tuple, 1) | acc]
-      else
-        acc
-      end
-    end)
+    indexes =
+      name_list
+      |> Enum.with_index()
+      |> Enum.reduce([], fn tuple, acc ->
+        if Enum.member?(selected_names, elem(tuple, 0)) do
+          [elem(tuple, 1) | acc]
+        else
+          acc
+        end
+      end)
+
     Enum.reverse(indexes)
   end
 
   @doc """
     Returns a value located at the position indicated by an index name and column name.
   """
-  @spec at(Frame.t, String.t, String.t) :: any()
+  @spec at(Frame.t(), String.t(), String.t()) :: any()
   def at(frame, index_name, column_name) do
-    index = Enum.find_index(frame.index, fn(x) -> to_string(x) == to_string(index_name) end)
-    column = Enum.find_index(frame.columns, fn(x) -> to_string(x) == to_string(column_name) end)
+    index = Enum.find_index(frame.index, fn x -> to_string(x) == to_string(index_name) end)
+    column = Enum.find_index(frame.columns, fn x -> to_string(x) == to_string(column_name) end)
     DataFrame.iat(frame, column, index)
   end
 
   @doc """
     Returns a value located at the position indicated by an index position and column position.
   """
-  @spec iat(Frame.t, integer, integer) :: any()
+  @spec iat(Frame.t(), integer, integer) :: any()
   def iat(frame, index, column) do
     Table.at(frame.values, index, column)
   end
@@ -275,10 +288,10 @@ defmodule DataFrame do
   @doc """
   Returns a list of data, not a frame like object. with the values of a given column
   """
-  @spec column(Frame.t, String.t) :: list()
+  @spec column(Frame.t(), String.t()) :: list()
   def column(frame, column_name) do
-    column = Enum.find_index(frame.columns, fn(x) -> to_string(x) == to_string(column_name) end)
-    frame.values |> Table.columns([column]) |> Table.to_row_list |> List.flatten
+    column = Enum.find_index(frame.columns, fn x -> to_string(x) == to_string(column_name) end)
+    frame.values |> Table.columns([column]) |> Table.to_row_list() |> List.flatten()
   end
 
   @doc """
@@ -287,23 +300,26 @@ defmodule DataFrame do
     # TODO: rationalize all this slicing operations
   """
   def filter_rows(frame, expected_column_name, expected_value) do
-    column_index = Enum.find_index(frame.columns, fn(x) -> x == expected_column_name end)
+    column_index = Enum.find_index(frame.columns, fn x -> x == expected_column_name end)
+
     if column_index == nil do
       frame
     else
-      values = Table.map_rows(frame.values,
-       fn(row) ->
-         if Enum.at(row, column_index) == expected_value do
-           row
-         else
-           [nil]
-         end
-       end
-     )
-     {new_values, new_index} = delete_nil_rows(values, frame.index)
-     DataFrame.new(new_values, frame.columns, new_index)
-    end
+      values =
+        Table.map_rows(
+          frame.values,
+          fn row ->
+            if Enum.at(row, column_index) == expected_value do
+              row
+            else
+              [nil]
+            end
+          end
+        )
 
+      {new_values, new_index} = delete_nil_rows(values, frame.index)
+      DataFrame.new(new_values, frame.columns, new_index)
+    end
   end
 
   @doc """
@@ -311,37 +327,47 @@ defmodule DataFrame do
   Returns a frame with the info for which `fun` returned true. Extremely greedy. Only elements, not rows/columns
   """
   def filter(frame, fun) do
-    with_nils = Enum.map(Table.with_index(frame.values), fn(row_tuple) ->
-      row = elem(row_tuple, 0)
-      row_index = elem(row_tuple, 1)
-      row_name = Enum.at(frame.index, row_index)
-      Enum.map row, fn(column_tuple) ->
-        value = elem(column_tuple, 0)
-        column_index = elem(column_tuple, 1)
-        column_name = Enum.at(frame.columns, column_index)
-        if fun.(value, column_name, column_index, row_name, row_index) do
-          value
-        else
-          nil
-        end
-      end
-    end)
+    with_nils =
+      Enum.map(Table.with_index(frame.values), fn row_tuple ->
+        row = elem(row_tuple, 0)
+        row_index = elem(row_tuple, 1)
+        row_name = Enum.at(frame.index, row_index)
+
+        Enum.map(row, fn column_tuple ->
+          value = elem(column_tuple, 0)
+          column_index = elem(column_tuple, 1)
+          column_name = Enum.at(frame.columns, column_index)
+
+          if fun.(value, column_name, column_index, row_name, row_index) do
+            value
+          else
+            nil
+          end
+        end)
+      end)
+
     {new_table, new_index} = delete_nil_rows(with_nils, frame.index)
     #  new_columns = frame.columns
     {final_table, new_columns} = delete_nil_rows(Table.transpose(new_table), frame.columns)
-    result_table = if final_table == [[]] do
+
+    result_table =
+      if final_table == [[]] do
         [[]]
       else
-         Table.transpose(final_table)
-        end
+        Table.transpose(final_table)
+      end
+
     DataFrame.new(result_table, new_columns, new_index)
   end
 
   defp delete_nil_rows([], _) do
-    {Table.new, []}
+    {Table.new(), []}
   end
+
   defp delete_nil_rows(table, list) do
-    nil_index = Enum.find_index(table, fn(row) -> Enum.all?(row, fn(element) -> element == nil end) end)
+    nil_index =
+      Enum.find_index(table, fn row -> Enum.all?(row, fn element -> element == nil end) end)
+
     if nil_index == nil do
       {table, list}
     else
@@ -356,21 +382,24 @@ defmodule DataFrame do
   @doc """
     Returns the cummulative sum
   """
-  @spec cumsum(Frame.t) :: Frame.t
+  @spec cumsum(Frame.t()) :: Frame.t()
   def cumsum(frame) do
-    cumsummed = frame.values |> Table.map_columns(fn(column) ->
-      Enum.flat_map_reduce(column, 0, fn(x, acc) ->
-        {[x + acc], acc + x}
+    cumsummed =
+      frame.values
+      |> Table.map_columns(fn column ->
+        Enum.flat_map_reduce(column, 0, fn x, acc ->
+          {[x + acc], acc + x}
+        end)
       end)
-    end)
-    data = Enum.at cumsummed, 0
+
+    data = Enum.at(cumsummed, 0)
     DataFrame.new(Table.transpose(data), frame.columns)
   end
 
   @doc """
     Returns a statistical description of the data in the frame
   """
-  @spec describe(Frame.t) :: Frame.t
+  @spec describe(Frame.t()) :: Frame.t()
   def describe(frame) do
     DataFrame.Statistics.describe(frame)
   end
@@ -384,34 +413,56 @@ defmodule DataFrame do
   """
   def to_csv(frame, filename, header \\ true) do
     file = File.open!(filename, [:write])
-    values = if header do
-      [frame.columns | frame.values]
-    else
-      frame.values
-    end
-    values |> CSV.encode |> Enum.each(&IO.write(file, &1))
+
+    values =
+      if header do
+        [frame.columns | frame.values]
+      else
+        frame.values
+      end
+
+    values |> CSV.encode() |> Enum.each(&IO.write(file, &1))
   end
 
   @doc """
     Reads the information from a CSV file. By default the first row is assumed to be the column names.
   """
-  @spec from_csv(String.t) :: Frame.t
+  @spec from_csv(String.t()) :: Frame.t()
   def from_csv(filename) do
-    [headers | values] = filename |> File.stream! |> CSV.decode |> Enum.to_list
+    [headers | values] = filename |> File.stream!() |> CSV.decode!() |> Enum.to_list()
     new(values, headers)
   end
 
-  @spec plot(Frame.t) :: :ok
+  @doc """
+    Reads the information from a CSV string. By default the first row is assumed to be the column names.
+  """
+  @spec from_string(String.t()) :: Frame.t()
+  def from_string(binary) do
+    splitted = Regex.split(~r/\r\n|\n/, String.trim(binary))
+
+    [headers | values] =
+      splitted
+      |> Stream.map(& &1)
+      |> CSV.decode!()
+      |> Enum.to_list()
+
+    new(values, headers)
+  end
+
+  @spec plot(Frame.t()) :: :ok
   def plot(frame) do
-    plotter = Explot.new
-    columns_with_index = frame.values |> Table.transpose |> Enum.with_index
-    Enum.each columns_with_index, fn(column_with_index) ->
+    plotter = Explot.new()
+    columns_with_index = frame.values |> Table.transpose() |> Enum.with_index()
+
+    Enum.each(columns_with_index, fn column_with_index ->
       column = elem(column_with_index, 0)
       column_name = Enum.at(frame.columns, elem(column_with_index, 1))
       Explot.add_list(plotter, column, column_name)
-    end
+    end)
+
     Explot.x_axis_labels(plotter, frame.index)
     Explot.show(plotter)
   end
 end
-#DataFrame.new(DataFrame.Table.build_random(6,4), [1,3,4,5], DataFrame.DateRange.new("2016-09-12", 6) )
+
+# DataFrame.new(DataFrame.Table.build_random(6,4), [1,3,4,5], DataFrame.DateRange.new("2016-09-12", 6) )

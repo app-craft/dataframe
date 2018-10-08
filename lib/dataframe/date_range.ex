@@ -25,19 +25,18 @@ defmodule DataFrame.DateRange do
 
   def new(start_date, periods) do
     date = Date.from_iso8601!(start_date)
-    Enum.map(0..periods - 1, &add_days_to_date(date, &1))
+    Enum.map(0..(periods - 1), &add_days_to_date(date, &1))
   end
 
   defp add_days_to_date(date, number_of_days) do
-    {:ok, time_day} = NaiveDateTime.new(date, Time.utc_now)
-    next_day = NaiveDateTime.add time_day, seconds_to_days(number_of_days), :second
-    NaiveDateTime.to_date next_day
+    {:ok, time_day} = NaiveDateTime.new(date, Time.utc_now())
+    next_day = NaiveDateTime.add(time_day, seconds_to_days(number_of_days), :second)
+    NaiveDateTime.to_date(next_day)
   end
 
   defp seconds_to_days(number_of_days) do
     60 * 60 * 24 * number_of_days
   end
-
 end
 
 defmodule DataFrame.DataRange do
@@ -47,15 +46,15 @@ defmodule DataFrame.DataRange do
   """
 
   def new(start_data, end_data) when is_number(start_data) and is_number(end_data) do
-    Enum.to_list start_data..end_data
+    Enum.to_list(start_data..end_data)
   end
 
   def new(start_data, end_data) when is_binary(start_data) and is_binary(end_data) do
     <<first_letter::utf8>> = start_data
     <<second_letter::utf8>> = end_data
-    first_letter..second_letter
-      |> Enum.to_list
-      |> Enum.map(&(<<&1::utf8>>))
-  end
 
+    first_letter..second_letter
+    |> Enum.to_list()
+    |> Enum.map(&<<&1::utf8>>)
+  end
 end
