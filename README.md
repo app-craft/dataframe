@@ -3,6 +3,7 @@
 Unofficial fork of [DataFrame](https://github.com/JordiPolo/dataframe)
 
 [![Build Status](https://travis-ci.org/app-craft/dataframe.svg?branch=master)](https://travis-ci.org/app-craft/dataframe)
+[![Ebert](https://ebertapp.io/github/app-craft/dataframe.svg)](https://ebertapp.io/github/app-craft/dataframe)
 
 DataFrame is a library that implements an API similar to [Python's Pandas](http://pandas.pydata.org/) or [R's data.frame()](http://www.r-tutor.com/r-introduction/data-frame).
 
