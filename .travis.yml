@@ -7,3 +7,5 @@ otp_release:
 branches:
   only:
     - master
+notifications:
+  email: false
