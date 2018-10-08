@@ -1,4 +1,3 @@
-
 defmodule DataFrame.Statistics do
   @moduledoc """
     Functions with statistics processing of Frames
@@ -15,7 +14,17 @@ defmodule DataFrame.Statistics do
   # max    1.212112  0.567020  0.276232  1.071804
   def describe(frame) do
     values = frame.values |> Table.map_columns(&describe_column/1)
-    DataFrame.new(values, frame.columns, ["count", "mean", "std", "min", "25%", "50%", "75%", "max"])
+
+    DataFrame.new(values, frame.columns, [
+      "count",
+      "mean",
+      "std",
+      "min",
+      "25%",
+      "50%",
+      "75%",
+      "max"
+    ])
   end
 
   defp describe_column(column) do
@@ -23,7 +32,7 @@ defmodule DataFrame.Statistics do
     mean = Enum.sum(column) / count
     min = Enum.min(column)
     max = Enum.max(column)
-    variance_sum = column |> Enum.map(fn(x) -> :math.pow((mean - x), 2) end) |> Enum.sum
+    variance_sum = column |> Enum.map(fn x -> :math.pow(mean - x, 2) end) |> Enum.sum()
     std = :math.sqrt(variance_sum / count)
     twenty_five = percentile(column, 0.25)
     fifty = percentile(column, 0.5)
@@ -32,7 +41,7 @@ defmodule DataFrame.Statistics do
   end
 
   defp percentile(values, percentile) do
-    values_sorted = Enum.sort values
+    values_sorted = Enum.sort(values)
     # Given we have for instance 80 elements, this is something like 36.2
     k = percentile * (Enum.count(values_sorted) - 1)
     previous_index = round(Float.floor(k))
@@ -49,5 +58,4 @@ defmodule DataFrame.Statistics do
     # Weight sum the previous calculations
     previous_number_weight * previous_number + next_number_weight * next_number
   end
-
 end

@@ -1,4 +1,3 @@
-
 defmodule DataFrame.Frame do
   @moduledoc """
   Struct which defines a Frame, a 2D table with columns and rows information
@@ -10,8 +9,8 @@ defmodule DataFrame.Frame do
   defstruct values: [[]], index: [], columns: []
 
   @type t :: %__MODULE__{
-    values: Table.t,
-    index: list(any()),
-    columns: list(any())
-  }
+          values: Table.t(),
+          index: list(any()),
+          columns: list(any())
+        }
 end

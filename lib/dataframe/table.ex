@@ -23,19 +23,19 @@ defmodule DataFrame.Table do
 
   @spec build_random(non_neg_integer, non_neg_integer) :: [[number]]
   def build_random(row_count, column_count) do
-    function = fn(_, _) -> :rand.uniform end
+    function = fn _, _ -> :rand.uniform() end
     build(row_count, column_count, function)
   end
 
   @spec build(non_neg_integer, non_neg_integer, function) :: t
   def build(row_count, column_count, function) do
-    rows = Enum.to_list 1..row_count
-    columns = Enum.to_list 1..column_count
-    Enum.map(rows, fn (row) -> Enum.map(columns, fn(column) -> function.(row, column) end) end)
+    rows = Enum.to_list(1..row_count)
+    columns = Enum.to_list(1..column_count)
+    Enum.map(rows, fn row -> Enum.map(columns, fn column -> function.(row, column) end) end)
   end
 
   def new([h | t]) when is_tuple(h) do
-    list_of_lists = Enum.map [h | t], &Tuple.to_list/1
+    list_of_lists = Enum.map([h | t], &Tuple.to_list/1)
     new(list_of_lists)
   end
 
@@ -50,7 +50,7 @@ defmodule DataFrame.Table do
     transpose(list_of_lists)
   end
 
-#  @spec new() :: t
+  #  @spec new() :: t
   def new do
     [[]]
   end
@@ -66,8 +66,8 @@ defmodule DataFrame.Table do
 
   @spec dimensions(t) :: [non_neg_integer]
   def dimensions(table) do
-    row_count = table |> Enum.filter(&(!Enum.empty?(&1))) |> Enum.count
-    column_count = table |> Enum.at(0) |> Enum.count
+    row_count = table |> Enum.filter(&(!Enum.empty?(&1))) |> Enum.count()
+    column_count = table |> Enum.at(0) |> Enum.count()
     [row_count, column_count]
   end
 
@@ -82,18 +82,21 @@ defmodule DataFrame.Table do
   def check_dimensional_compatibility!(table, list, dimension) do
     list_dimension = Enum.count(list)
     table_dimension = table |> dimensions |> Enum.at(dimension)
+
     if list_dimension != table_dimension do
       raise ArgumentError,
-        "Table dimension #{table_dimension} does not match the #{dimension_name(dimension)} dimension #{list_dimension}"
+            "Table dimension #{table_dimension} does not match the #{dimension_name(dimension)} dimension #{
+              list_dimension
+            }"
     end
   end
 
-  @spec dimension_name(1) :: String.t
+  @spec dimension_name(1) :: String.t()
   defp dimension_name(dimension) when dimension == 1 do
     "row"
   end
 
-  @spec dimension_name(0) :: String.t
+  @spec dimension_name(0) :: String.t()
   defp dimension_name(dimension) when dimension == 0 do
     "column"
   end
@@ -107,12 +110,12 @@ defmodule DataFrame.Table do
     table |> Enum.at(row) |> Enum.at(column)
   end
 
-  @spec slice(t, Range.t, Range.t) :: t
+  @spec slice(t, Range.t(), Range.t()) :: t
   def slice(table, range_index, range_column) do
     table |> Enum.slice(range_index) |> Enum.map(&Enum.slice(&1, range_column))
   end
 
-  @spec rows_columns(t, Range.t| list, Range.t | list) :: t
+  @spec rows_columns(t, Range.t() | list, Range.t() | list) :: t
   def rows_columns(table, row_info, column_info) do
     table |> rows(row_info) |> columns(column_info)
   end
@@ -122,19 +125,19 @@ defmodule DataFrame.Table do
     multiple_at(table, row_indexes)
   end
 
-  @spec rows(t, Range.t) :: t
+  @spec rows(t, Range.t()) :: t
   def rows(table, first..last) when is_integer(first) and is_integer(last) do
     Enum.slice(table, first..last)
   end
 
   @spec columns(t, list) :: t
   def columns(table, column_indexes) when is_list(column_indexes) do
-    Enum.map(table, fn(row) -> multiple_at(row, column_indexes) end)
+    Enum.map(table, fn row -> multiple_at(row, column_indexes) end)
   end
 
-  @spec columns(t, Range.t) :: t
+  @spec columns(t, Range.t()) :: t
   def columns(table, first..last) when is_integer(first) and is_integer(last) do
-    Enum.map(table, fn(x) -> Enum.slice(x, first..last) end)
+    Enum.map(table, fn x -> Enum.slice(x, first..last) end)
   end
 
   # TODO: move somewhere
@@ -143,8 +146,8 @@ defmodule DataFrame.Table do
   # so users of Table can reorder columns and/or rows
   defp multiple_at(list, list_index) do
     list_index
-    |> Enum.map(fn(index) -> Enum.at(list, index) end)
-    |> Enum.filter(fn(element) -> element != nil end)
+    |> Enum.map(fn index -> Enum.at(list, index) end)
+    |> Enum.filter(fn element -> element != nil end)
   end
 
   # ##################################################
@@ -153,7 +156,7 @@ defmodule DataFrame.Table do
 
   @spec map_rows(t, function) :: t
   def map_rows(table, func) do
-    Enum.map(table, &(func.(&1)))
+    Enum.map(table, &func.(&1))
   end
 
   @spec map_columns(t, function) :: t
@@ -163,19 +166,20 @@ defmodule DataFrame.Table do
 
   @spec map(t, function) :: t
   def map(table, func) do
-    Enum.map(table, fn(column) -> Enum.map(column, fn(y) -> func.(y) end) end)
+    Enum.map(table, fn column -> Enum.map(column, fn y -> func.(y) end) end)
   end
 
   # Experimental
   def reduce(table, acc, fun) do
     table
-    |> Enum.map(fn(row) -> Enum.reduce(row, acc, fun) end)
+    |> Enum.map(fn row -> Enum.reduce(row, acc, fun) end)
     |> Enum.reduce(acc, fun)
   end
 
-  @spec with_index(t) :: nonempty_list({nonempty_list({any(), non_neg_integer()}), non_neg_integer()})
+  @spec with_index(t) ::
+          nonempty_list({nonempty_list({any(), non_neg_integer()}), non_neg_integer()})
   def with_index(table) do
-    table |> Enum.map(&Enum.with_index/1) |> Enum.with_index
+    table |> Enum.map(&Enum.with_index/1) |> Enum.with_index()
   end
 
   # ##################################################
@@ -189,7 +193,7 @@ defmodule DataFrame.Table do
   end
 
   def remove_column(table, column_index, return_column: true) do
-    column = List.flatten columns(table, column_index..column_index)
+    column = List.flatten(columns(table, column_index..column_index))
     rest = columns(table, 1..-1)
     [rest, column]
   end
@@ -200,11 +204,11 @@ defmodule DataFrame.Table do
   end
 
   def transpose(table) do
-    table |> List.zip |> Enum.map(&Tuple.to_list(&1))
+    table |> List.zip() |> Enum.map(&Tuple.to_list(&1))
   end
 
   @spec sort_rows(t, function) :: t
   def sort_rows(table, sorting_func) do
-    table |> Enum.sort(fn(x,y) -> sorting_func.(x,y) end)
+    table |> Enum.sort(fn x, y -> sorting_func.(x, y) end)
   end
 end
