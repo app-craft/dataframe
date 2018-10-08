@@ -3,7 +3,7 @@ elixir:
   - '1.7.3'
 otp_release:
   - '21.1'
-
 branches:
   only:
     - master
+script: mix test && mix credo
