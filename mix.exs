@@ -50,7 +50,7 @@ defmodule Dataframe.Mixfile do
     [
       {:explot, "~> 0.1.0"},
       {:csv, "~> 2.0.0"},
-      {:credo, "~> 0.10", only: [:dev, :test]},
+      {:credo, "~> 0.10", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 0.5", only: [:dev]},
       {:ex_doc, "~> 0.19", only: :dev}
     ]
