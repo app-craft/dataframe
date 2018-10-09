@@ -28,8 +28,6 @@ defmodule DataFrame do
   @spec new(Table.t() | list, list, list) :: Frame.t()
   def new(table, columns, index) when is_list(index) and is_list(columns) do
     values = Table.new(table)
-    Table.check_dimensional_compatibility!(values, index, 0)
-    Table.check_dimensional_compatibility!(values, columns, 1)
     %Frame{values: values, index: index, columns: columns}
   end
 

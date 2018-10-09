@@ -39,28 +39,17 @@ defmodule DataFrameTest do
       assert DataFrame.new([[0], [1]], [:A]) ==
                %Frame{values: [[0], [1]], index: [0, 1], columns: [:A]}
     end
-
-    test "Exception when the dimensions do not match" do
-      assert_raise ArgumentError, "Table dimension 1 does not match the row dimension 2", fn ->
-        DataFrame.new([[0], [1]], [:A, :B])
-      end
-    end
   end
 
   describe "new/3" do
     test "Creates empty frame from empty inputs" do
       assert DataFrame.new([[]], [], []) == empty_frame()
+      assert DataFrame.new([], [], []) == %Frame{values: [], index: [], columns: []}
     end
 
     test "Creates a Frame from regular inputs" do
       assert DataFrame.new([[0], [1]], [:A], [1, 2]) ==
                %Frame{values: [[0], [1]], index: [1, 2], columns: [:A]}
-    end
-
-    test "Exception when the dimensions do not match" do
-      assert_raise ArgumentError, "Table dimension 2 does not match the column dimension 1", fn ->
-        DataFrame.new([[0], [1]], [:A], [1])
-      end
     end
   end
 

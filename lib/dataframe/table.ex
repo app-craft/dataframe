@@ -79,28 +79,6 @@ defmodule DataFrame.Table do
     table |> dimensions |> Enum.at(0)
   end
 
-  def check_dimensional_compatibility!(table, list, dimension) do
-    list_dimension = Enum.count(list)
-    table_dimension = table |> dimensions |> Enum.at(dimension)
-
-    if list_dimension != table_dimension do
-      raise ArgumentError,
-            "Table dimension #{table_dimension} does not match the #{dimension_name(dimension)} dimension #{
-              list_dimension
-            }"
-    end
-  end
-
-  @spec dimension_name(1) :: String.t()
-  defp dimension_name(dimension) when dimension == 1 do
-    "row"
-  end
-
-  @spec dimension_name(0) :: String.t()
-  defp dimension_name(dimension) when dimension == 0 do
-    "column"
-  end
-
   # ##################################################
   #  Selecting
   # ##################################################
@@ -188,7 +166,6 @@ defmodule DataFrame.Table do
 
   @spec append_column(t, [any]) :: t
   def append_column(table, column) do
-    check_dimensional_compatibility!(table, column, 0)
     column |> Enum.zip(table) |> Enum.map(&Tuple.to_list/1) |> Enum.map(&List.flatten/1)
   end
 
