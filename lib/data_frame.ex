@@ -319,6 +319,45 @@ defmodule DataFrame do
   end
 
   @doc ~S"""
+  Maps the given fun over enumerable and flattens the result.
+
+  Rows are annotated by default, you can switch it off by using `annotated: false` option.
+
+  ## Examples
+    iex> DataFrame.flat_map(DataFrame.new([[1,2],[3,4]], ["A", "B"]), fn row -> [%{row | "A" => row["A"] * 10}, %{row | "A" => row["A"] * 20}] end)
+    DataFrame.new([[10,2], [20,2], [30,4], [60,4]], ["A", "B"])
+
+    iex> DataFrame.flat_map(DataFrame.new([[1,2],[3,4]], ["A", "B"]), fn row -> [List.update_at(row, 0, &(&1 * 10)), List.update_at(row, 0, &(&1 * 20))] end, annotated: false)
+    DataFrame.new([[10,2], [20,2], [30,4], [60,4]], ["A", "B"])
+  """
+  @spec flat_map(Frame.t(), (map -> map)) :: Frame.t()
+  def flat_map(frame, fun, opts \\ []) do
+    annotated? = Keyword.get(opts, :annotated, true)
+
+    values =
+      Enum.flat_map(frame.values, fn values ->
+        row =
+          if annotated? do
+            Enum.into(Enum.zip(frame.columns, values), %{})
+          else
+            values
+          end
+
+        new_rows = fun.(row)
+
+        if annotated? do
+          Enum.map(new_rows, fn new_row ->
+            Enum.map(frame.columns, &Map.fetch!(new_row, &1))
+          end)
+        else
+          new_rows
+        end
+      end)
+
+    new(values, frame.columns)
+  end
+
+  @doc ~S"""
   Filters the frame rows, i.e. returns only those rows for which fun returns a truthy value.
 
   Rows are annotated by default, you can switch it off by using `annotated: false` option.
