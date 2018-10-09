@@ -349,6 +349,37 @@ defmodule DataFrame do
     new(values, frame.columns)
   end
 
+  @doc ~S"""
+  Returns a list of rows in table excluding those for which the function fun returns a truthy value.
+
+  Rows are annotated by default, you can switch it off by using `annotated: false` option.
+
+  ## Examples
+
+    iex> DataFrame.reject(DataFrame.new([[1,2],[3,4]], ["A", "B"]), fn row -> row["A"] > 2 end)
+    DataFrame.new([[1,2]], ["A", "B"])
+
+    iex> DataFrame.reject(DataFrame.new([[1,2],[3,4]], ["A", "B"]), fn row -> hd(row) > 2 end, annotated: false)
+    DataFrame.new([[1,2]], ["A", "B"])
+  """
+  def reject(frame, fun, opts \\ []) do
+    annotated? = Keyword.get(opts, :annotated, true)
+
+    values =
+      Enum.reject(frame.values, fn values ->
+        row =
+          if annotated? do
+            Enum.into(Enum.zip(frame.columns, values), %{})
+          else
+            values
+          end
+
+        fun.(row)
+      end)
+
+    new(values, frame.columns)
+  end
+
   @doc """
     Sorts the data in the frame based on its index. By default the data is sorted in ascending order.
   """
