@@ -123,6 +123,24 @@ defmodule DataFrame do
     end)
   end
 
+  @doc ~S"""
+  Rename columns with mapper.
+
+  ## Examples
+
+    iex> DataFrame.rename(DataFrame.new([[1,2],[3,4]], ["A", "B"]), %{"A" => :a})
+    DataFrame.new([[1,2],[3,4]], [:a, "B"])
+  """
+  @spec rename(Frame.t(), map) :: Frame.t()
+  def rename(frame, column_names) do
+    new_columns =
+      Enum.map(frame.columns, fn column ->
+        Map.get(column_names, column, column)
+      end)
+
+    new(frame.values, new_columns)
+  end
+
   @doc """
     Sorts the data in the frame based on its index. By default the data is sorted in ascending order.
   """
