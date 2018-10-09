@@ -108,12 +108,19 @@ defmodule DataFrame do
     |> Enum.map(fn value -> filter_rows(frame, master_column, value) end)
   end
 
-  @doc """
-  DataFrame.to_list_of_maps DataFrame.new([[1,2],[3,4]], ["A", "B"])
-  > [%{"A" => 1, "B" => 2}, %{"A" => 3, "B" => 4}]
+  @doc ~S"""
+  Transforms dataframe to list of maps.
+
+  ## Examples
+
+    iex> DataFrame.to_list_of_maps(DataFrame.new([[1,2],[3,4]], ["A", "B"]))
+    [%{"A" => 1, "B" => 2}, %{"A" => 3, "B" => 4}]
   """
-  def to_list_of_maps(_) do
-    # TODO
+  @spec to_list_of_maps(Frame.t()) :: [map]
+  def to_list_of_maps(frame) do
+    Enum.map(frame.values, fn values ->
+      Enum.into(Enum.zip(frame.columns, values), %{})
+    end)
   end
 
   @doc """
