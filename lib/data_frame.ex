@@ -318,6 +318,37 @@ defmodule DataFrame do
     new(values, frame.columns)
   end
 
+  @doc ~S"""
+  Filters the frame rows, i.e. returns only those rows for which fun returns a truthy value.
+
+  Rows are annotated by default, you can switch it off by using `annotated: false` option.
+
+  ## Examples
+
+    iex> DataFrame.filter(DataFrame.new([[1,2],[3,4]], ["A", "B"]), fn row -> row["A"] > 2 end)
+    DataFrame.new([[3,4]], ["A", "B"])
+
+    iex> DataFrame.filter(DataFrame.new([[1,2],[3,4]], ["A", "B"]), fn row -> hd(row) > 2 end, annotated: false)
+    DataFrame.new([[3,4]], ["A", "B"])
+  """
+  def filter(frame, fun, opts \\ []) do
+    annotated? = Keyword.get(opts, :annotated, true)
+
+    values =
+      Enum.filter(frame.values, fn values ->
+        row =
+          if annotated? do
+            Enum.into(Enum.zip(frame.columns, values), %{})
+          else
+            values
+          end
+
+        fun.(row)
+      end)
+
+    new(values, frame.columns)
+  end
+
   @doc """
     Sorts the data in the frame based on its index. By default the data is sorted in ascending order.
   """
@@ -522,44 +553,6 @@ defmodule DataFrame do
       {new_values, new_index} = delete_nil_rows(values, frame.index)
       DataFrame.new(new_values, frame.columns, new_index)
     end
-  end
-
-  @doc """
-  Experimental
-  Returns a frame with the info for which `fun` returned true. Extremely greedy. Only elements, not rows/columns
-  """
-  def filter(frame, fun) do
-    with_nils =
-      Enum.map(Table.with_index(frame.values), fn row_tuple ->
-        row = elem(row_tuple, 0)
-        row_index = elem(row_tuple, 1)
-        row_name = Enum.at(frame.index, row_index)
-
-        Enum.map(row, fn column_tuple ->
-          value = elem(column_tuple, 0)
-          column_index = elem(column_tuple, 1)
-          column_name = Enum.at(frame.columns, column_index)
-
-          if fun.(value, column_name, column_index, row_name, row_index) do
-            value
-          else
-            nil
-          end
-        end)
-      end)
-
-    {new_table, new_index} = delete_nil_rows(with_nils, frame.index)
-    #  new_columns = frame.columns
-    {final_table, new_columns} = delete_nil_rows(Table.transpose(new_table), frame.columns)
-
-    result_table =
-      if final_table == [[]] do
-        [[]]
-      else
-        Table.transpose(final_table)
-      end
-
-    DataFrame.new(result_table, new_columns, new_index)
   end
 
   defp delete_nil_rows([], _) do
