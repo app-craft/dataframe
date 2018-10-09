@@ -52,27 +52,166 @@ defmodule DataFrame do
     columns = String.split(header, " ", trim: true)
     data_values = data |> Table.new() |> Table.map_rows(&String.split(&1, " ", trim: true))
     [values, index] = Table.remove_column(data_values, 0, return_column: true)
-    values_data = Table.map(values, &transform_type/1)
-    columns_data = Enum.map(columns, &transform_type/1)
-    index_data = Enum.map(index, &transform_type/1)
+    values_data = Table.map(values, &infer_type/1)
+    columns_data = Enum.map(columns, &infer_type/1)
+    index_data = Enum.map(index, &infer_type/1)
     new(values_data, columns_data, index_data)
   end
 
-  # TODO: Refactor, probably this is the most non-Elixir code even written
-  defp transform_type(element) do
-    int = Integer.parse(element)
+  @doc ~S"""
+  Convert element to infered type.
+  In case of map, lists and frames converts their values.
 
-    if int == :error or elem(int, 1) != "" do
-      float = Float.parse(element)
+  ## Examples
 
-      if float == :error or elem(float, 1) != "" do
-        element
-      else
-        elem(float, 0)
+    iex> DataFrame.infer_type("10")
+    10
+
+    iex> DataFrame.infer_type("10.1")
+    10.1
+
+    iex> DataFrame.infer_type("false")
+    false
+
+    iex> DataFrame.infer_type("2018-01-01")
+    ~D[2018-01-01]
+
+    iex> DataFrame.infer_type("lflkj123f")
+    "lflkj123f"
+
+    iex> DataFrame.infer_type(["1","2",3])
+    [1,2,3]
+
+    iex> DataFrame.infer_type(%{a: "10", b: 10})
+    %{a: 10, b: 10}
+
+    iex> DataFrame.infer_type(DataFrame.new([["1","2"]], [:a, :b]))
+    DataFrame.new([[1, 2]], [:a, :b])
+  """
+  @spec infer_type(any) :: number | boolean | String.t() | Date.t()
+
+  def infer_type(%Frame{} = frame) do
+    map(frame, &infer_type/1, annotated: false)
+  end
+
+  def infer_type(elements) when is_map(elements) do
+    Enum.into(elements, %{}, fn {k, v} -> {k, infer_type(v)} end)
+  end
+
+  def infer_type(elements) when is_list(elements) do
+    Enum.map(elements, &infer_type/1)
+  end
+
+  def infer_type(element) do
+    types = [&try_int/1, &try_float/1, &try_boolean/1, &try_date/1, &try_string/1]
+
+    Enum.reduce_while(types, element, fn fun, value ->
+      case fun.(value) do
+        :error -> {:cont, value}
+        converted -> {:halt, converted}
       end
-    else
-      elem(int, 0)
+    end)
+  end
+
+  @doc ~S"""
+  Force convert element to certain type.
+  In case of map and lists converts their values.
+
+  ## Examples
+
+    iex> DataFrame.as_type!("10", :int)
+    10
+
+    iex> DataFrame.as_type!("10.1", :float)
+    10.1
+
+    iex> DataFrame.as_type!("false", :boolean)
+    false
+
+    iex> DataFrame.as_type!("2018-01-01", :date)
+    ~D[2018-01-01]
+
+    iex> DataFrame.as_type!(["1","2",3], :int)
+    [1,2,3]
+
+    iex> DataFrame.as_type!(%{a: "10", b: 10}, :int)
+    %{a: 10, b: 10}
+  """
+  @type types :: :int | :float | :boolean | :date | :string
+  @spec as_type!(any, types) :: number | boolean | String.t() | Date.t()
+  def as_type!(elements, type) when is_list(elements) do
+    Enum.map(elements, &as_type!(&1, type))
+  end
+
+  def as_type!(elements, type) when is_map(elements) do
+    Enum.into(elements, %{}, fn {k, v} -> {k, as_type!(v, type)} end)
+  end
+
+  def as_type!(element, type) do
+    converter =
+      case type do
+        :int -> &try_int/1
+        :float -> &try_float/1
+        :boolean -> &try_boolean/1
+        :date -> &try_date/1
+        :string -> &try_string/1
+      end
+
+    case converter.(element) do
+      :error -> raise "failed to convert #{inspect(element)} to #{inspect(type)}"
+      value -> value
     end
+  end
+
+  defp try_int(element) when is_integer(element), do: element
+  defp try_int(element) when is_number(element), do: round(element)
+
+  defp try_int(element) when is_binary(element) do
+    case Integer.parse(element) do
+      {value, ""} -> value
+      _ -> :error
+    end
+  end
+
+  defp try_int(_), do: :error
+
+  defp try_float(element) when is_number(element), do: element
+
+  defp try_float(element) when is_binary(element) do
+    case Float.parse(element) do
+      {value, ""} -> value
+      _ -> :error
+    end
+  end
+
+  defp try_float(_), do: :error
+
+  defp try_boolean(element) when is_boolean(element), do: element
+  defp try_boolean(element) when is_number(element), do: round(element) != 0
+
+  defp try_boolean(element) when is_binary(element) do
+    case String.trim(element) do
+      "true" -> true
+      "false" -> false
+      _ -> :error
+    end
+  end
+
+  defp try_boolean(_), do: :error
+
+  defp try_date(%Date{} = element), do: element
+
+  defp try_date(element) do
+    case Date.from_iso8601(element) do
+      {:ok, value} -> value
+      {:error, _} -> :error
+    end
+  end
+
+  defp try_string(element) when is_binary(element), do: element
+
+  defp try_string(element) do
+    to_string(element)
   end
 
   # ##################################################
