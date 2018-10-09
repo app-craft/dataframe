@@ -509,6 +509,49 @@ defmodule DataFrame do
     icolumns(frame, indexes_by_name(frame.columns, column_names))
   end
 
+  @doc ~S"""
+  Appends derived column to table.
+
+  ## Examples
+
+    iex> DataFrame.append_column(DataFrame.new([[1],[2]], [:a]), :b, fn _ -> 10 end)
+    DataFrame.new([[1,10], [2, 10]], [:a, :b])
+  """
+  @spec append_column(Frame.t(), any, (any -> any)) :: Frame.t()
+  def append_column(frame, column_name, fun, opts \\ []) do
+    append_columns(frame, [column_name], fn row -> [fun.(row)] end, opts)
+  end
+
+  @doc ~S"""
+  Appends derived columns to table.
+
+  ## Examples
+
+    iex> DataFrame.append_columns(DataFrame.new([[1],[2]], [:a]), [:b, :c], fn _ -> [10, 20] end)
+    DataFrame.new([[1,10, 20], [2, 10, 20]], [:a, :b, :c])
+  """
+  @spec append_columns(Frame.t(), any, (any -> [any])) :: Frame.t()
+  def append_columns(frame, column_names, fun, opts \\ []) do
+    annotated? = Keyword.get(opts, :annotated, true)
+
+    values =
+      Enum.map(frame.values, fn values ->
+        row =
+          if annotated? do
+            Enum.into(Enum.zip(frame.columns, values), %{})
+          else
+            values
+          end
+
+        new_values = fun.(row)
+        values ++ new_values
+      end)
+
+    columns = frame.columns ++ column_names
+
+    new(values, columns)
+  end
+
   @doc """
   Returns a Frame with the selected columns by position.
   """
