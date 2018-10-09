@@ -141,6 +141,44 @@ defmodule DataFrame do
     new(frame.values, new_columns)
   end
 
+  @doc ~S"""
+  Returns a frame where each row is the result of invoking fun on each corresponding row.
+
+  Rows are annotated by default, you can switch it off by using `annotated: false` option.
+
+  ## Examples
+
+    iex> DataFrame.map(DataFrame.new([[1,2],[3,4]], ["A", "B"]), fn row -> %{ row | "A" => row["A"] * 10 } end)
+    DataFrame.new([[10,2],[30,4]], ["A", "B"])
+
+    iex> DataFrame.map(DataFrame.new([[1,2],[3,4]], ["A", "B"]), fn row -> List.update_at(row, 0, &(&1 * 10)) end, annotated: false)
+    DataFrame.new([[10,2],[30,4]], ["A", "B"])
+  """
+  @spec map(Frame.t(), (map -> map)) :: Frame.t()
+  def map(frame, fun, opts \\ []) do
+    annotated? = Keyword.get(opts, :annotated, true)
+
+    values =
+      Enum.map(frame.values, fn values ->
+        row =
+          if annotated? do
+            Enum.into(Enum.zip(frame.columns, values), %{})
+          else
+            values
+          end
+
+        new_row = fun.(row)
+
+        if annotated? do
+          Enum.map(frame.columns, &Map.fetch!(new_row, &1))
+        else
+          new_row
+        end
+      end)
+
+    new(values, frame.columns)
+  end
+
   @doc """
     Sorts the data in the frame based on its index. By default the data is sorted in ascending order.
   """
