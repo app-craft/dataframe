@@ -31,6 +31,10 @@ defmodule DataFrame do
     %Frame{values: values, index: index, columns: columns}
   end
 
+  defp autoindex_for_values_dimension([], _) do
+    []
+  end
+
   defp autoindex_for_values_dimension(values, dimension) do
     table_dimension = values |> Table.new() |> Table.dimensions() |> Enum.at(dimension)
 

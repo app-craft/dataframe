@@ -19,6 +19,10 @@ defmodule DataFrameTest do
       assert DataFrame.new([[]]) == empty_frame()
     end
 
+    test "Creates an empty frame from empty list" do
+      assert DataFrame.new([])
+    end
+
     test "Creates a valid frame from a list of lists" do
       assert DataFrame.new([[1, 2, 3], [4, 5, 6]]) ==
                %Frame{values: [[1, 2, 3], [4, 5, 6]], index: [0, 1], columns: [0, 1, 2]}
