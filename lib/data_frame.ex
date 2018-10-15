@@ -759,6 +759,34 @@ defmodule DataFrame do
     new(values, headers)
   end
 
+  @doc ~S"""
+  Creates table from list of maps by deriving keys from first map in list.
+
+  ## Examples
+
+    iex> DataFrame.from_list_of_maps([%{a: 1, b: 2}])
+    DataFrame.new([[1,2]], [:a, :b])
+  """
+  @spec from_list_of_maps([map()]) :: Frame.t()
+  def from_list_of_maps([row | _] = list) do
+    headers = row |> Map.keys() |> Enum.sort()
+    from_list_of_maps(list, headers)
+  end
+
+  @doc ~S"""
+  Creates table from list of maps and key columns.
+
+  ## Examples
+
+    iex> DataFrame.from_list_of_maps([%{a: 1, b: 2}], [:a, :b])
+    DataFrame.new([[1,2]], [:a, :b])
+  """
+  @spec from_list_of_maps([map()], [any]) :: Frame.t()
+  def from_list_of_maps(list, columns) do
+    values = Enum.map(list, fn map -> Enum.map(columns, &Map.fetch!(map, &1)) end)
+    new(values, columns)
+  end
+
   @spec plot(Frame.t()) :: :ok
   def plot(frame) do
     plotter = Explot.new()
