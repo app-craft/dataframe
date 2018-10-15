@@ -389,6 +389,41 @@ defmodule DataFrame do
     new(values, frame.columns)
   end
 
+  @doc ~S"""
+  Returns a list of rows in table.
+
+  Rows are annotated by default, you can switch it off by using `annotated: false` option.
+
+  ## Examples
+
+    iex> DataFrame.new([[1,2]], [:a, :b]) |> DataFrame.values()
+    [%{a: 1, b: 2}]
+  """
+  def values(frame, opts \\ []) do
+    frame
+    |> values_stream(opts)
+    |> Enum.into([])
+  end
+
+  @doc ~S"""
+  Returns a stream of rows in table.
+
+  Rows are annotated by default, you can switch it off by using `annotated: false` option.
+
+  ## Examples
+
+    iex> DataFrame.new([[1,2]], [:a, :b]) |> DataFrame.values_stream() |> Enum.into([])
+    [%{a: 1, b: 2}]
+  """
+  def values_stream(frame, opts \\ []) do
+    annotated? = Keyword.get(opts, :annotated, true)
+
+    frame.values
+    |> Stream.map(fn values ->
+      prepare_row(values, frame, annotated: annotated?)
+    end)
+  end
+
   defp prepare_row(values, frame, annotated: true) do
     Enum.into(Enum.zip(frame.columns, values), %{})
   end
