@@ -301,20 +301,10 @@ defmodule DataFrame do
 
     values =
       Enum.map(frame.values, fn values ->
-        row =
-          if annotated? do
-            Enum.into(Enum.zip(frame.columns, values), %{})
-          else
-            values
-          end
-
-        new_row = fun.(row)
-
-        if annotated? do
-          Enum.map(frame.columns, &Map.fetch!(new_row, &1))
-        else
-          new_row
-        end
+        values
+        |> prepare_row(frame, annotated: annotated?)
+        |> fun.()
+        |> prepare_values(frame, annotated: annotated?)
       end)
 
     new(values, frame.columns)
@@ -338,22 +328,10 @@ defmodule DataFrame do
 
     values =
       Enum.flat_map(frame.values, fn values ->
-        row =
-          if annotated? do
-            Enum.into(Enum.zip(frame.columns, values), %{})
-          else
-            values
-          end
-
-        new_rows = fun.(row)
-
-        if annotated? do
-          Enum.map(new_rows, fn new_row ->
-            Enum.map(frame.columns, &Map.fetch!(new_row, &1))
-          end)
-        else
-          new_rows
-        end
+        values
+        |> prepare_row(frame, annotated: annotated?)
+        |> fun.()
+        |> Enum.map(&prepare_values(&1, frame, annotated: annotated?))
       end)
 
     new(values, frame.columns)
@@ -377,14 +355,9 @@ defmodule DataFrame do
 
     values =
       Enum.filter(frame.values, fn values ->
-        row =
-          if annotated? do
-            Enum.into(Enum.zip(frame.columns, values), %{})
-          else
-            values
-          end
-
-        fun.(row)
+        values
+        |> prepare_row(frame, annotated: annotated?)
+        |> fun.()
       end)
 
     new(values, frame.columns)
@@ -408,18 +381,25 @@ defmodule DataFrame do
 
     values =
       Enum.reject(frame.values, fn values ->
-        row =
-          if annotated? do
-            Enum.into(Enum.zip(frame.columns, values), %{})
-          else
-            values
-          end
-
-        fun.(row)
+        values
+        |> prepare_row(frame, annotated: annotated?)
+        |> fun.()
       end)
 
     new(values, frame.columns)
   end
+
+  defp prepare_row(values, frame, annotated: true) do
+    Enum.into(Enum.zip(frame.columns, values), %{})
+  end
+
+  defp prepare_row(values, _frame, annotated: false), do: values
+
+  defp prepare_values(row, frame, annotated: true) do
+    Enum.map(frame.columns, &Map.fetch!(row, &1))
+  end
+
+  defp prepare_values(row, _frame, annotated: false), do: row
 
   @doc """
     Sorts the data in the frame based on its index. By default the data is sorted in ascending order.
@@ -538,14 +518,11 @@ defmodule DataFrame do
 
     values =
       Enum.map(frame.values, fn values ->
-        row =
-          if annotated? do
-            Enum.into(Enum.zip(frame.columns, values), %{})
-          else
-            values
-          end
+        new_values =
+          values
+          |> prepare_row(frame, annotated: annotated?)
+          |> fun.()
 
-        new_values = fun.(row)
         values ++ new_values
       end)
 
